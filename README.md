@@ -26,4 +26,4 @@ The processing can be run on a file produced by edep-sim.
 The following is an example produced by `draw_len.py` using two files: one produced with the nominal pi+ cross section
 (which was then reweighted by a factor of 2) and one produced by biasing (in edep-sim) the cross section by a factor of 2.
 
-#![Alt text](https://github.com/calcuttj/2x2_G4RW/blob/develop/plots/weight_example.pdf)
+![Alt text](plots/weight_example.png)
