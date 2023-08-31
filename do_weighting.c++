@@ -165,17 +165,19 @@ int main(int argc, char ** argv) {
   auto material = fcl_pars.get<fhicl::ParameterSet>("Material");
   auto fracs_file_name = fcl_pars.get<std::string>("FracsFile");
   auto g4rw_pars = fcl_pars.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
+  auto set_weight = fcl_pars.get<double>("Weight", 2.);
 
-  //TFile * fracs_file = TFile::Open(fracs_file_name.c_str());
+  //Open the file holding the final state fractions
   TFile * fracs_file = OpenFile(fracs_file_name);
   std::cout << "Fracs file: " << fracs_file << std::endl;
 
+  //Set up reweighting objects
   G4ReweightManager * RWManager = new G4ReweightManager({material});
   G4MultiReweighter * reweighter = new G4MultiReweighter(
     211, *fracs_file, g4rw_pars, material, RWManager);
-  auto set_weight = fcl_pars.get<double>("Weight", 2.);
-  reweighter->SetAllParameterValues({set_weight});
+  reweighter->SetAllParameterValues({set_weight}); //Set the weight
 
+  //Inputfile 
   TFile f(input_file.c_str(), "open");
   TTree * tree = (TTree*)f.Get("EDepSimEvents");
   TG4Event * event = 0x0;
@@ -184,6 +186,7 @@ int main(int argc, char ** argv) {
   int ninteractions = 0;
   double nweighted = 0., ntotal = 0.;
 
+  //Output File
   TFile fOut(output_file.c_str(), "recreate");
   TTree outtree("tree", "");
   double weight = 1.;
@@ -191,12 +194,11 @@ int main(int argc, char ** argv) {
   outtree.Branch("weight", &weight);
   outtree.Branch("len", &out_len);
 
+  //Loop over edep sim events
   for (int i = 0; i < tree->GetEntries(); ++i) {
     std::cout << "############" << std::endl;
     tree->GetEntry(i);
-    //std::cout << event->Trajectories.size() << std::endl;
     EDepSimEvent edep_event(event);
-    //std::cout << edep_event.fPrimaryPDG << std::endl;
 
     if (edep_event.IsInteraction()) ++ninteractions;
 
@@ -212,7 +214,7 @@ int main(int argc, char ** argv) {
       );
     }
 
-    //Build the path
+    //Build the path it took
     const auto & pt0 = edep_event.fPrimaryTraj->Points[0];
     std::cout << 0 << " " << pt0.GetPosition().X()/10. << " " <<
                  pt0.GetPosition().Y()/10. << " " << pt0.GetPosition().Z()/10. <<
@@ -266,6 +268,8 @@ int main(int argc, char ** argv) {
                                                  len, proc);
       primary_traj.AddStep(step);
     }
+
+    //Get the weight for this trajectory/event
     weight = reweighter->GetWeightFromSetParameters(primary_traj);
     std::cout << "Weight: " << weight << std::endl;;
     if (edep_event.IsInteraction()) nweighted += weight;
